@@ -1,4 +1,5 @@
 from typing import Optional
+from random import randint
 
 class Connect4:
     table:list[int] # TABLE pieces :  Empty = 0 , User = 1, Machine = 2
@@ -102,12 +103,22 @@ class Connect4:
         
     def machine_moves(self)->None:
         # Temporal user vs user functionality
+        # --------------------------
         col = input(" USER MOVES : Introduce the column you want to place the chip: ")
         while not col.isdecimal() or self.invalid_col_input(int(col)):
             print("Invalid move")
             col = input("Introduce the column you want to place the chip: ")
-        self.make_move(int(col))   
-
+        self.make_move(int(col)) 
+        # --------------------------
+        # Heuristic playing
+        # --------------------------
+        # col = 
+        # while self.invalid_col_input(col):
+        #     col = randint(0,6)
+        # self.make_move(col)
+        # --------------------------
+        pass
+        
 def main():
     # table = [[0 , 0 , 0 , 0, 0, 0 , 0 ],
     #          [0 , 0 , 0 , 0, 0, 0 , 0 ],
