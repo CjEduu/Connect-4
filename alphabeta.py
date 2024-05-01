@@ -1,21 +1,20 @@
 from copy import deepcopy
+from math import inf
+from random import randint
 
 """Alfa beta pruning algorithm for generating the machine moves"""
 
 class Node:
-    def __init__(self,parent,table,who_moves_now) -> None:
+    def __init__(self,table,who_moves_now)->None:
+        self.table = table
         self.who_moves_now = who_moves_now
-        self.parent = parent
-        self.table  = table
-        self.move = None
-        self.value = None
-    
+            
     def expand(self) -> list['Node']:
         childs:list[Node] = list()
         for col in range(7):
             table = self.make_move(col)
             if table is not None:
-                child = Node(self,table,-self.who_moves_now)
+                child = Node(table,self.who_moves_now)
                 childs.append(child)
         return childs
         
@@ -30,7 +29,6 @@ class Node:
                 not_found = False
         if not_found:
             rowi = 5
-            
         if rowi == -1:
             table = None
         else:
@@ -38,50 +36,93 @@ class Node:
         
         return table
 
+    ## SABER SI UNA POSICIÓN ES TERMINAL
 
+    def not_won(self,table:list[list[int]],who_moved:int) ->bool:
+            won = False
+            for i,row in enumerate(table):
+                for j,num in enumerate(row):
+                    # print(f"PIECE {(i,j)} \n---------------------")
+                    if num == who_moved:
+                        won = self.possible_win(table,i,j,who_moved)
+                    if won:
+                        return won
+            return won
 
-def alpha_beta_pruning()->int: #Devuelve la columna del movimiento
-    pass
+    def possible_win (self,table:list[list[int]],i:int,j:int,who:int)->bool:
+        directions = [(1,-1),(1,0),(1,1),(0,1),(0,-1),(-1,-1),(-1,0),(-1,1)]
 
+        for move in directions:
+            # print(f"MOVE: {move}\n")
+            connected = 1
+            posy = i
+            posx = j
+            piece = table[posy][posx]
 
+            while piece == who and connected < 4 and self.valid_move(posy,posx,move):
+                posy +=  move[0]
+                posx +=  move[1]
+                piece = table[posy][posx]
+                if piece == who:
+                    connected += 1
+                    # print(f"Pos: {(posy,posx)} Connected {connected}") 
 
+            if connected == 4:
+                return True
+        return False
 
-def evaluate_node(Node:Node)->None:
-    # la intencion es crear un metodo de evaluacion que sume por cada ficha conectada tuya y reste por ficha conectada del rival
-    # no si seria optimo tambien sumar por posibilidad de encadenar 4 o imposibilidad, ya que 2 fichas conectadas pero con imposibilidad de encadenar 4 no deberian sumar
-    # ej
-    # .  .   .   . La ficha "o" de la izquierda jamás podrá sumar 4, la ficha o de la derecha podría en diagonal, pero ya no contaría como ficha conectada
-    # .  x   x   .
-    # x  o   o   x
-    #
-    # posiblemente lo mejor sea sumar puntos por conectadas y por direcciones en las que "podría" conectar 4
-    pass
+    def valid_move(self,posi:int,posj:int,move:tuple[int,int]) -> bool:
+            valid = False
+            if 0 <= posi + move[0] <= 5 and 0 <= posj + move[1]  <= 6:
+                valid = True
+            return valid
 
+    # -------------
 
-
-
-def main():
-    table = [[0 , 0 , 0 , 0, 0, 0 , -1 ],
-             [0 , 0 , 0 , 0, 0, 0 , 1 ],
-             [0 , 0 , 0 , 0,-1,-1 ,-1 ],
-             [0 , 0 , 0 ,-1,-1, 1 , 1 ],
-             [0 , 0 , 1 ,-1, 1, 1 ,-1 ],
-             [0 , 1 ,-1 , 1, 1,-1 ,-1 ]]
+def alphabeta(node:Node,depth)->int:
+    value = alphabeta_(node,depth,inf,-inf,True)
     
-    nodo = Node(None,table,1)
-    print("INITIAL TABLE")
-    print_table(table)
-    print("------------------")
+    #habria que buscar la columna a la que  se refiere el valor devuelto en los hijos del node 
     
+    return value
+
+def alphabeta_(node:Node,depth,alpha,beta,maxplayer)->int: #Devuelve la columna del movimiento
     
-    childs = nodo.expand()
-    for i,child in enumerate(childs):
-        print(f"TABLE {i}-------------")
-        print_table(child.table)
-        for j,child2 in enumerate(child.expand()):
-            print(f"TABLE {j} FATHER {i}-------------")
-            print_table(child2.table)
-            
+    if depth == 0 or node.not_won(node.table,-node.who_moves_now):
+        return heuristic(node)
+    
+    if maxplayer:
+        value = -inf
+        for child in node.expand():
+            value = max(value,alphabeta_(child,depth-1,alpha,beta,False))
+            alpha = max(alpha,value)
+            if alpha >= beta:
+                break
+        return value
+
+    else: 
+        value = inf
+        for child in node.expand():
+            value = min(value,alphabeta_(child,depth-1,alpha,beta,True))
+            beta = min(beta,value)
+            if alpha >= beta:
+                break
+        return value
+
+def heuristic(node:Node)->None:
+        # la intencion es crear un metodo de evaluacion que sume por cada ficha conectada tuya y reste por ficha conectada del rival
+        # no si seria optimo tambien sumar por posibilidad de encadenar 4 o imposibilidad, ya que 2 fichas conectadas pero con imposibilidad de encadenar 4 no deberian sumar
+        # ej
+        # .  .   .   . La ficha "o" de la izquierda jamás podrá sumar 4, la ficha o de la derecha podría en diagonal, pero ya no contaría como ficha conectada
+        # .  x   x   .
+        # x  o   o   x
+        #
+        # posiblemente lo mejor sea sumar puntos por conectadas y por direcciones en las que "podría" conectar 4
+        x = randint(1,10)
+        return x
+
+
+
 def print_table(table)->None:
         print([x for x in range(7)])
         for row in table:
@@ -94,53 +135,3 @@ def print_table(table)->None:
                     char = "■"
                 print(f"{char:>3}",end="")
             print("\n")
-
-
-
-
-## SABER SI UNA POSICIÓN ES TERMINAL
-
-def not_won(table:list[list[int]],who_moved:int) ->bool:
-        won = False
-        for i,row in enumerate(table):
-            for j,num in enumerate(row):
-                # print(f"PIECE {(i,j)} \n---------------------")
-                if num == who_moved:
-                    won = possible_win(table,i,j,who_moved)
-                if won:
-                    return won
-        return won
-    
-def possible_win (table:list[list[int]],i:int,j:int,who:int)->bool:
-    directions = [(1,-1),(1,0),(1,1),(0,1),(0,-1),(-1,-1),(-1,0),(-1,1)]
-    
-    for move in directions:
-        # print(f"MOVE: {move}\n")
-        connected = 1
-        posy = i
-        posx = j
-        piece = table[posy][posx]
-        
-        while piece == who and connected < 4 and valid_move(posy,posx,move):
-            posy +=  move[0]
-            posx +=  move[1]
-            piece = table[posy][posx]
-            if piece == who:
-                connected += 1
-                # print(f"Pos: {(posy,posx)} Connected {connected}") 
-            
-        if connected == 4:
-            return True
-    return False
-
-def valid_move(posi:int,posj:int,move:tuple[int,int]) -> bool:
-        valid = False
-        if 0 <= posi + move[0] <= 5 and 0 <= posj + move[1]  <= 6:
-            valid = True
-        return valid
-
-# -------------
-
-
-if __name__ == "__main__":
-    main()
